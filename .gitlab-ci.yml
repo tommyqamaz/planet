@@ -1,0 +1,87 @@
+image: python:3.9
+
+variables:
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE
+  DOCKER_TAG: $CI_COMMIT_SHORT_SHA
+
+before_script:
+    - chmod 400 $SSH_PRIVATE_KEY
+    - mkdir -p ~/.ssh
+    - cp $SSH_PRIVATE_KEY ~/.ssh/id_rsa
+    - chmod 400 ~/.ssh/id_rsa
+
+after_script:
+    - rm -f ~/.ssh/id_rsa
+
+stages:
+  - tests
+  - build
+  - deploy
+
+linter:
+  stage: tests
+  script:
+    - python3 -m pip install flake8
+    - flake8 .
+  tags: ['cvr-nov22']
+
+unit_tests:
+  needs: ["linter"]
+  stage: tests
+  script:
+    - make install_c_libs && make install && make download_weights
+    - make run_unit_tests
+  tags: ['cvr-nov22']
+
+integration_tests:
+  stage: tests
+  needs: ["unit_tests"]
+  script:
+    - make install_c_libs && make install && make download_weights
+    - make run_integration_tests
+  tags: ['cvr-nov22']
+
+
+build_image:
+  stage: build
+  needs: ["integration_tests"]
+  image: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  services:
+    - docker:20.10.5-dind
+  script:
+    - apk add make python3-dev py-pip gcc musl-dev py3-pygit2 py3-psutil
+    - python3 --version
+    - python3 -m pip install dvc[ssh]==2.12.1
+    - dvc pull
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker pull $CI_REGISTRY_IMAGE:latest || true
+    - docker build --cache-from $DOCKER_IMAGE:latest --tag ${DOCKER_IMAGE}:${DOCKER_TAG} --tag ${DOCKER_IMAGE}:latest .
+    - docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+    - docker push ${DOCKER_IMAGE}:latest 
+
+  tags: ['cvr-nov22']
+
+deploy:
+  stage: deploy
+  needs: ["destroy"]
+  variables:
+    ANSIBLE_HOST_KEY_CHECKING: "false"
+  script:
+    - python3 -m pip install ansible==6.0.0
+    - make deploy DOCKER_IMAGE=${DOCKER_IMAGE} DOCKER_TAG=${DOCKER_TAG}
+
+  tags: ['cvr-nov22']
+
+destroy:
+  needs: ["build_image"]
+  stage: deploy
+  variables:
+    ANSIBLE_HOST_KEY_CHECKING: "false"
+  script:
+    - python3 -m pip install ansible==6.0.0
+    - make destroy
+
+  tags: ['cvr-nov22']

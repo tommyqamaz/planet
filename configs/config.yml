@@ -1,0 +1,40 @@
+services:
+  classifier:
+    model_path: 'weights/pvtv2.onnx'
+    provider: "CPUExecutionProvider"
+    ths: 
+      - 0.16
+      - 0.06
+      - 0.17
+      - 0.13
+      - 0.11
+      - 0.12
+      - 0.05
+      - 0.1
+      - 0.16
+      - 0.23
+      - 0.14
+      - 0.1
+      - 0.16
+      - 0.22
+      - 0.28
+      - 0.08
+      - 0.13
+    classes:
+      - agriculture
+      - artisinal_mine
+      - bare_ground
+      - blooming
+      - blow_down
+      - clear
+      - cloudy
+      - conventional_mine
+      - cultivation
+      - habitation
+      - haze
+      - partly_cloudy
+      - primary
+      - road
+      - selective_logging
+      - slash_burn
+      - water

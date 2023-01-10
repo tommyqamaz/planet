@@ -1,0 +1,8 @@
+[core]
+    no_scm = True
+    remote = kekus
+[cache]
+    type = "hardlink,symlink"
+['remote "kekus"']
+    url = ssh://91.206.15.25/home/soldatovman/dvc_files
+    user = soldatovman

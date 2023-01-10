@@ -1,0 +1,4 @@
+outs:
+- md5: f32d41207029d3342683fbfbfda58898
+  size: 54271282
+  path: pvtv2.onnx
